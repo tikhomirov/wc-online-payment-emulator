@@ -114,10 +114,19 @@ class WC_Gateway_Online extends WC_Payment_Gateway
 
     public function receipt_page($order_id)
     {
-        $order = new WC_Order($order_id);
-        echo 'Редирект на внешнюю оплату..';
+        $order = wc_get_order($order_id);
 
-        wp_redirect($this->get_return_url());
+        if ($order instanceof WC_Order) {
+            $result = $this->virtual_pay($order);
+
+            if (! empty($result['redirect'])) {
+                wp_safe_redirect($result['redirect']);
+                exit;
+            }
+        }
+
+        wp_safe_redirect($this->get_return_url($order));
+        exit;
     }
 
 
@@ -130,7 +139,7 @@ class WC_Gateway_Online extends WC_Payment_Gateway
 
         return [
             'result'   => 'success',
-            'redirect' => $order->get_checkout_payment_url($order)
+            'redirect' => $order->get_checkout_payment_url(true),
         ];
     }
 
@@ -141,35 +150,37 @@ class WC_Gateway_Online extends WC_Payment_Gateway
 
     private function virtual_pay($order)
     {
+        if (! ($order instanceof WC_Order)) {
+            return [
+                'result'   => 'failure',
+                'redirect' => '',
+            ];
+        }
 
         if ($order->get_status() === 'pending') {
-            // Get processed data.
-            $order   = wc_get_order($order->get_id());
             $bill_id = wp_rand(0, 99999999999999999);
-            $order->set_transaction_id($bill_id);
-
-            // Reduce stock levels.
-            wc_reduce_stock_levels($order->get_id());
-            // Remove cart.
-            wc_empty_cart();
+            $order->set_transaction_id((string) $bill_id);
 
             $order->add_order_note(__('The client started paying.', 'wc-online-payment-emulator'));
-            // .... payment process
+
+            wc_reduce_stock_levels($order->get_id());
+            wc_empty_cart();
 
             $order->add_order_note(__('The client completed the payment.', 'wc-online-payment-emulator'));
-            $order->update_status('complete', __('The order was successfully paid online', 'wc-online-payment-emulator'));
-            $order->payment_complete($bill_id);
-        } elseif ( ! $order->is_paid() && $order->get_status() === 'cancelled') {
+            $order->payment_complete();
+
+            if ($order->get_status() !== 'processing') {
+                $order->update_status('processing', __('Payment emulator: set status to processing.', 'wc-online-payment-emulator'));
+            }
+        } elseif (! $order->is_paid() && $order->get_status() === 'cancelled') {
             error_log('fail');
         } else {
             error_log('..');
         }
 
-        // Return thankyou redirect
         return [
             'result'   => 'success',
-            'success'  => $this->get_return_url($order),
-            'redirect' => $this->get_return_url($order)
+            'redirect' => $order->get_checkout_order_received_url(),
         ];
     }
 
