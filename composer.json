@@ -1,6 +1,6 @@
 {
   "name": "tikhomirov/wc-online-payment-emulator",
-  "description": "Платежный шлюз-эмулятор для WooCommerce. Идеально подходит для локальной разработки, тестирования оформления заказов и создания собственных платежных интеграций.",
+  "description": "WordPress plugin wc-online-payment-emulator",
   "type": "wordpress-plugin",
   "license": "GPL-3.0-or-later",
   "authors": [
