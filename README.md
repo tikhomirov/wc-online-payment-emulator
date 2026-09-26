@@ -20,6 +20,7 @@
 
 ### Через Composer (рекомендуется)
 ```bash
+composer config repositories.tikhomirov-wc-online-payment-emulator git https://github.com/tikhomirov/wc-online-payment-emulator.git
 composer require tikhomirov/wc-online-payment-emulator
 ```
 
